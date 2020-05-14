@@ -11,7 +11,7 @@ def saveToCSV(ticker):
 
     ts = TimeSeries(key=creds["alpha_vantage_key"], output_format='pandas')
     data, meta_data = ts.get_daily(ticker, outputsize='full')
-    data.to_csv(f'./{ticker}_daily.csv')
+    # data.to_csv(f'./{ticker}_daily.csv')
 
     # data = yf.Ticker(ticker).history(period="10y")
     # data.to_csv(f'./{ticker}_daily_yf.csv')
@@ -19,7 +19,6 @@ def saveToCSV(ticker):
     # print(data.head())
 
     return data
-
 
 
 def csv_to_dataset(csv_path):
