@@ -27,6 +27,10 @@ def main():
 
     print("Look-back Data Shape: " + str(lead_infos.shape))
     print("Open Val Data Shape: " + str(open_vals.shape))
+    print("TRANSFORMED")
+    print(data_normalizer.inverse_transform(open_vals))
+    # print("RAW")
+    # print(raw_open_data)
 
     # Training and Testing Data Split
     test_split = 0.15
@@ -52,6 +56,11 @@ def main():
     y_test_prediction = model.predict(X_test)
     y_test_prediction = data_normalizer.inverse_transform(y_test_prediction)     # scale back from 0 to 1
 
+    # y_test_prediction = []
+    # initial_test = X_test[0]
+    # for i in range(50):
+    #     print("PREDICTED: " + str(model.predict(initial_test)))
+
     plt.gcf().set_size_inches(22, 15, forward=True)
 
     start = 0
@@ -61,6 +70,9 @@ def main():
 
     plt.plot(data_normalizer.inverse_transform(y_test)[start:end], label='real')
     plt.plot(y_test_prediction[start:end], label='predicted')
+
+    # print(y_test_prediction[start:end])
+    # print(data_normalizer.inverse_transform(y_test)[start:end])
 
     plt.legend(['Real', 'Predicted'])
 

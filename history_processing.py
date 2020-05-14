@@ -9,8 +9,8 @@ import numpy as np
 def saveToCSV(ticker):
     creds = json.load(open('creds.json', 'r'))
 
-    ts = TimeSeries(key=creds["alpha_vantage_key"], output_format='pandas')
-    data, meta_data = ts.get_daily(ticker, outputsize='full')
+    # ts = TimeSeries(key=creds["alpha_vantage_key"], output_format='pandas')
+    # data, meta_data = ts.get_daily(ticker, outputsize='full')
     # data.to_csv(f'./{ticker}_daily.csv')
 
     # data = yf.Ticker(ticker).history(period="10y")
@@ -18,17 +18,21 @@ def saveToCSV(ticker):
 
     # print(data.head())
 
+    data = csv_to_dataset(f'./{ticker}_daily.csv')           #####
     return data
 
 
 def csv_to_dataset(csv_path):
     data = pd.read_csv(csv_path)
     data = data.drop('date', axis=1)
-    data = data.drop(0, axis=0)
+    # data = data.drop(0, axis=0)
     print(data.head())
+    return data
 
 def dataframeToData(data, length):
     data = data.values
+    data = data[::-1]           # reverses list to increasing time
+    data = data[1::]            # removes first day (often outlier data for recently IPO companies
     data_normaliser = preprocessing.MinMaxScaler()
     data_normalised = data_normaliser.fit_transform(data)
 
@@ -40,13 +44,12 @@ def dataframeToData(data, length):
     open_data = np.expand_dims(open_data, -1)
 
     y_normaliser = preprocessing.MinMaxScaler()
-    open_data = y_normaliser.fit(open_data)
+    y_normaliser.fit(open_data)
 
     # print("high")
     # print(ohlcv_data)
     # print("low")
-    # print(open_data)
-    #
+    # print(open_data_normal)
     # print(ohlcv_data[1][length-1])
 
     return ohlcv_data, open_data_normal, y_normaliser
