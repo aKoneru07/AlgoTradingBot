@@ -36,9 +36,14 @@ def dataframeToData(data, length):
     data_normaliser = preprocessing.MinMaxScaler()
     data_normalised = data_normaliser.fit_transform(data)
 
-    ohlcv_data = np.array([data_normalised[i:i+length] for i in range(len(data_normalised) - length)])
-    open_data_normal = np.array([data_normalised[i + length][0] for i in range(len(data_normalised) - length)])
+    ohlcv_data = np.array([data_normalised[i:i+length] for i in range(len(data_normalised) - length - 3)])
+    open_data_normal = np.array([data_normalised[i + length + 3][0] for i in range(len(data_normalised) - length - 3)])
+    # open_data_normal = np.array([data_normalised[i + length][0:3] for i in range(len(data_normalised) - length - 3)])
+    # print(open_data_normal)
+
     open_data_normal = np.expand_dims(open_data_normal, -1)
+    open_data_normal = np.reshape(open_data_normal, (open_data_normal.shape[0], open_data_normal.shape[1]))
+    print(open_data_normal)
 
     open_data = np.array([data[i+length][0] for i in range(len(data) - length)])
     open_data = np.expand_dims(open_data, -1)

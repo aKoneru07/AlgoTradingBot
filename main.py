@@ -1,9 +1,10 @@
 import alpaca
 import history_processing
 from keras.models import Sequential
-from keras.layers import LSTM, Dropout, Dense
+from keras.layers import LSTM, Dropout, Dense, TimeDistributed
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 api = alpaca.api
@@ -51,16 +52,14 @@ def main():
 
     model.fit(x=X_train, y=y_train, batch_size=32, epochs=50, shuffle=True, validation_split=0.1)
     evaluation = model.evaluate(X_test, y_test)
-    # print("Eval: " + str(evaluation))
+    print("Eval: " + str(evaluation))
 
     y_test_prediction = model.predict(X_test)
     y_test_prediction = data_normalizer.inverse_transform(y_test_prediction)     # scale back from 0 to 1
+    # print(y_test_prediction)
 
-    # y_test_prediction = []
-    # initial_test = X_test[0]
-    # for i in range(50):
-    #     print("PREDICTED: " + str(model.predict(initial_test)))
-
+    # pred_day = [[0]*j + [y_test_prediction[i][j] for i in range(len(y_test_prediction))] for j in range(3)]
+    # print(pred_day)
     plt.gcf().set_size_inches(22, 15, forward=True)
 
     start = 0
@@ -68,13 +67,26 @@ def main():
 
     plt.title(TICKER + str(' Stock Prediction'))
 
-    plt.plot(data_normalizer.inverse_transform(y_test)[start:end], label='real')
-    plt.plot(y_test_prediction[start:end], label='predicted')
+    plt.plot(data_normalizer.inverse_transform(y_test)[start:end], label='Real')
+    # print("y_test")
+    # print(y_test)
+    # real_open = [y_test[i][0] for i in range(len(y_test))]
+    # real_open.append(y_test[len(y_test)-1][1])
+    # real_open.append(y_test[len(y_test)-1][2])
+    # real_open = np.expand_dims(real_open, -1)
+    # real_open = data_normalizer.inverse_transform(real_open)[start:end]
+    # print(real_open)
+    # plt.plot(real_open, label='real')
+
+    plt.plot(y_test_prediction[start:end], label='Predicted')
+
+    # for i in range(len(pred_day)):
+    #     plt.plot(pred_day[i], label = str(i) + ' day ahead')
 
     # print(y_test_prediction[start:end])
     # print(data_normalizer.inverse_transform(y_test)[start:end])
 
-    plt.legend(['Real', 'Predicted'])
+    plt.legend(loc='upper left')
 
     plt.show()
 
