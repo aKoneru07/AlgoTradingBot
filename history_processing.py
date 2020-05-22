@@ -4,21 +4,22 @@ import json
 import pandas as pd
 from sklearn import preprocessing
 import numpy as np
+from indicators import get_indicators
 
 
 def saveToCSV(ticker):
     creds = json.load(open('creds.json', 'r'))
 
-    # ts = TimeSeries(key=creds["alpha_vantage_key"], output_format='pandas')
-    # data, meta_data = ts.get_daily(ticker, outputsize='full')
-    # data.to_csv(f'./{ticker}_daily.csv')
+    ts = TimeSeries(key=creds["alpha_vantage_key"], output_format='pandas')
+    data, meta_data = ts.get_daily(ticker, outputsize='full')
+    data.to_csv(f'./{ticker}_daily.csv')
 
     # data = yf.Ticker(ticker).history(period="10y")
     # data.to_csv(f'./{ticker}_daily_yf.csv')
 
-    # print(data.head())
+    print(data.head())
 
-    data = csv_to_dataset(f'./{ticker}_daily.csv')           #####
+    # data = csv_to_dataset(f'./{ticker}_daily.csv')           #####
     return data
 
 
@@ -36,8 +37,8 @@ def dataframeToData(data, length):
     data_normaliser = preprocessing.MinMaxScaler()
     data_normalised = data_normaliser.fit_transform(data)
 
-    ohlcv_data = np.array([data_normalised[i:i+length] for i in range(len(data_normalised) - length - 3)])
-    open_data_normal = np.array([data_normalised[i + length + 3][0] for i in range(len(data_normalised) - length - 3)])
+    ohlcv_data = np.array([data_normalised[i:i+length] for i in range(len(data_normalised) - length)])
+    open_data_normal = np.array([data_normalised[i + length][0] for i in range(len(data_normalised) - length)])
     # open_data_normal = np.array([data_normalised[i + length][0:3] for i in range(len(data_normalised) - length - 3)])
     # print(open_data_normal)
 
@@ -51,10 +52,13 @@ def dataframeToData(data, length):
     y_normaliser = preprocessing.MinMaxScaler()
     y_normaliser.fit(open_data)
 
+    indic_data = np.array([get_indicators(ohlcv_data[i], 14) for i in range(len(ohlcv_data))])
+    print(indic_data)
+
     # print("high")
     # print(ohlcv_data)
     # print("low")
     # print(open_data_normal)
     # print(ohlcv_data[1][length-1])
 
-    return ohlcv_data, open_data_normal, y_normaliser
+    return ohlcv_data, open_data_normal, indic_data, y_normaliser

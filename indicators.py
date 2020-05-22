@@ -9,9 +9,9 @@ def get_indicators(ohlcv_data, length = 14):
 
         if ohlcv_data[i][1] > high_price:
             high_price = ohlcv_data[i][1]
-
-    return np.array([RSI(ohlcv_data), Stochastic_Oscillator(ohlcv_data, high_price, low_price),
-                     WPR(ohlcv_data, high_price, low_price), MACD(ohlcv_data), EMA(ohlcv_data)])
+    return np.array([RSI(ohlcv_data) / 100, Stochastic_Oscillator(ohlcv_data, high_price, low_price) / 100, WPR(ohlcv_data, high_price, low_price) / -100])
+    # return np.array([RSI(ohlcv_data), Stochastic_Oscillator(ohlcv_data, high_price, low_price),
+    #                  WPR(ohlcv_data, high_price, low_price), MACD(ohlcv_data), EMA(ohlcv_data)])
 
 
 def RSI(ohlcv_data, length = 14):               # based on closing price
@@ -22,7 +22,7 @@ def RSI(ohlcv_data, length = 14):               # based on closing price
             gain += ohlcv_data[i+1][3] - ohlcv_data[i][3]
 
         else:
-            loss += ohlcv_data[i+1][3] - ohlcv_data[i][3]
+            loss += ohlcv_data[i][3] - ohlcv_data[i+1][3]
 
     if loss == 0:
         return 100
