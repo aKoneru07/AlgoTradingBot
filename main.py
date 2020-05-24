@@ -19,30 +19,51 @@ def MSE(real, predicted):
         mse += pow((real[i]-predicted[i]), 2)
     return (1/len(real)) * mse
 
-def run_simul(real, predicted):
+def run_simul(real, predicted, initial = 2500):
     assert (len(real) == len(predicted))
     buys = [[],[]]
     sells = [[],[]]
-    spent = 0
-    num_shares = 0
-    revenue = 0
+    spent, num_shares, revenue = 0, 0, 0
+    max_spent, temp_spent = 0, 0
+    total_loss = 0
+    limit = initial
     for i in range(len(predicted)-1):
-        change = (predicted[i+1] - real[i]) / (real[i])
+        change = (predicted[i+1] - predicted[i]) / (predicted[i])
         # if change > 0.005:
         #     print("CHANGE: " + str(change))
-        if change > 0.005:
-            spent += real[i]
-            num_shares += 1
+        if change > 0.005 and int((limit - temp_spent) / real[i]) > 0:
+            order_size = 1
+            if change > 0.01:
+                order_size = int((limit - temp_spent) / real[i])  # use ALL remaining money to buy
+                print("MAJOR BUY AT: " + str(real[i]))
+            else:
+                print("BOUGHT AT: " + str(real[i]))
+            spent += order_size * real[i]
+            temp_spent += order_size * real[i]
+            num_shares += order_size
             buys[0].append(i)
             buys[1].append(real[i])
-            print("BOUGHT AT: " + str(real[i]))
+            # print("BOUGHT AT: " + str(real[i]))
         if change < -0.005 and num_shares > 0:
             revenue += num_shares * real[i]
             num_shares = 0
+            if temp_spent > max_spent:
+                max_spent = temp_spent
+            temp_spent = 0
+
+            if limit > initial + (revenue - spent):
+                loss = limit - (initial + (revenue - spent))
+                total_loss += loss
+                print("LOST: " + str(loss))
+
+            limit = initial + (revenue - spent)     # can spend everything it earns
+            print("LIMIT: " + str(limit))
             sells[0].append(i)
             sells[1].append(real[i])
             print("SOLD AT: " + str(real[i]))
-
+    print("TOTAL LOSS: " + str(total_loss))
+    print("MAX SPENT: " + str(max_spent))
+    print("NUM SHARES: " + str(num_shares) + ", PRICED AT: " + str(real[len(real)-2]))
     return revenue - spent, buys, sells
 
 def main():
@@ -59,13 +80,6 @@ def main():
 
     raw_data = history_processing.saveToCSV(TICKER)
     lead_infos, open_vals, indic_data, data_normalizer = history_processing.dataframeToData(raw_data, LOOK_BACK_PERIOD)     # 50 day look-back period
-
-    print("Look-back Data Shape: " + str(lead_infos.shape))
-    print("Open Val Data Shape: " + str(open_vals.shape))
-    print("TRANSFORMED")
-    print(data_normalizer.inverse_transform(open_vals))
-    # print("RAW")
-    # print(raw_open_data)
 
     # Training and Testing Data Split
     test_split = 0.15
@@ -107,10 +121,14 @@ def main():
     evaluation = model.evaluate([indic_test, X_test], y_test)
     print("Eval: " + str(evaluation))
 
+    # Graphing Model predictive performance
+
     y_test_prediction = model.predict([indic_test, X_test])
     y_test_prediction = data_normalizer.inverse_transform(y_test_prediction)     # scale back from 0 to 1
     mse_run = MSE(data_normalizer.inverse_transform(y_test), y_test_prediction)[0]
     print("MSE: " + str(mse_run))
+
+    # Running simulation with basic strategy
 
     profit, buys, sells = run_simul(data_normalizer.inverse_transform(y_test), y_test_prediction)
     print("Profited: " + str(profit))
