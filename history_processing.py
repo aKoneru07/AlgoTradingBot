@@ -1,5 +1,4 @@
 from alpha_vantage.timeseries import TimeSeries
-import yfinance as yf
 import json
 import pandas as pd
 from sklearn import preprocessing
@@ -14,14 +13,10 @@ def saveToCSV(ticker):
     data, meta_data = ts.get_daily(ticker, outputsize='full')
     data.to_csv(f'./{ticker}_daily.csv')
 
-    # data = yf.Ticker(ticker).history(period="10y")
-    # data.to_csv(f'./{ticker}_daily_yf.csv')
-
     print(data.head())
 
     # data = csv_to_dataset(f'./{ticker}_daily.csv')           #####
     return data
-
 
 def csv_to_dataset(csv_path):
     data = pd.read_csv(csv_path)
@@ -37,16 +32,23 @@ def dataframeToData(data, length):
     data_normaliser = preprocessing.MinMaxScaler()
     data_normalised = data_normaliser.fit_transform(data)
 
-    ohlcv_data = np.array([data_normalised[i:i+length] for i in range(len(data_normalised) - length)])
-    open_data_normal = np.array([data_normalised[i + length][0] for i in range(len(data_normalised) - length)])
-    # open_data_normal = np.array([data_normalised[i + length][0:3] for i in range(len(data_normalised) - length - 3)])
-    # print(open_data_normal)
+    percent_data = [[((data[i][j] - data[i-1][j])/data[i-1][j]) for j in range(len(data[0]))] for i in range(1, len(data))]
+    percent_normaliser = preprocessing.MinMaxScaler()
+    percent_normalised = percent_normaliser.fit_transform(percent_data)
+
+    # ohlcv_data = np.array([data_normalised[i:i+length] for i in range(len(data_normalised) - length)])
+    # open_data_normal = np.array([data_normalised[i + length][0] for i in range(len(data_normalised) - length)])
+
+    ohlcv_data = np.array([percent_normalised[i:i+length] for i in range(len(percent_normalised) - length)])
+    open_data_normal = np.array([percent_normalised[i + length][0] for i in range(len(percent_normalised) - length)])
 
     open_data_normal = np.expand_dims(open_data_normal, -1)
     open_data_normal = np.reshape(open_data_normal, (open_data_normal.shape[0], open_data_normal.shape[1]))
     print(open_data_normal)
 
-    open_data = np.array([data[i+length][0] for i in range(len(data) - length)])
+    # open_data = np.array([data[i+length][0] for i in range(len(data) - length)])
+    # open_data = np.expand_dims(open_data, -1)
+    open_data = np.array([percent_data[i+length][0] for i in range(len(percent_data) - length)])
     open_data = np.expand_dims(open_data, -1)
 
     y_normaliser = preprocessing.MinMaxScaler()
@@ -60,5 +62,6 @@ def dataframeToData(data, length):
     # print("low")
     # print(open_data_normal)
     # print(ohlcv_data[1][length-1])
+    real_data = np.array([data[i + length][0] for i in range(len(data) - length)])
 
-    return ohlcv_data, open_data_normal, indic_data, y_normaliser
+    return ohlcv_data, open_data_normal, indic_data, y_normaliser, real_data

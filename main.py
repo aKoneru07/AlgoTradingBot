@@ -1,5 +1,4 @@
 import alpaca
-import history_processing
 import keras
 from keras.models import Sequential, Model
 from keras.layers import LSTM, Dropout, Dense, TimeDistributed, concatenate, Activation
@@ -7,6 +6,8 @@ from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 import numpy as np
 
+import history_processing
+from simulation import run_simul
 
 api = alpaca.api
 LOOK_BACK_PERIOD = 50
@@ -18,53 +19,6 @@ def MSE(real, predicted):
     for i in range(len(predicted)):
         mse += pow((real[i]-predicted[i]), 2)
     return (1/len(real)) * mse
-
-def run_simul(real, predicted, initial = 2500):
-    assert (len(real) == len(predicted))
-    buys = [[],[]]
-    sells = [[],[]]
-    spent, num_shares, revenue = 0, 0, 0
-    max_spent, temp_spent = 0, 0
-    total_loss = 0
-    limit = initial
-    for i in range(len(predicted)-1):
-        change = (predicted[i+1] - predicted[i]) / (predicted[i])
-        # if change > 0.005:
-        #     print("CHANGE: " + str(change))
-        if change > 0.005 and int((limit - temp_spent) / real[i]) > 0:
-            order_size = 1
-            if change > 0.01:
-                order_size = int((limit - temp_spent) / real[i])  # use ALL remaining money to buy
-                print("MAJOR BUY AT: " + str(real[i]))
-            else:
-                print("BOUGHT AT: " + str(real[i]))
-            spent += order_size * real[i]
-            temp_spent += order_size * real[i]
-            num_shares += order_size
-            buys[0].append(i)
-            buys[1].append(real[i])
-            # print("BOUGHT AT: " + str(real[i]))
-        if change < -0.005 and num_shares > 0:
-            revenue += num_shares * real[i]
-            num_shares = 0
-            if temp_spent > max_spent:
-                max_spent = temp_spent
-            temp_spent = 0
-
-            if limit > initial + (revenue - spent):
-                loss = limit - (initial + (revenue - spent))
-                total_loss += loss
-                print("LOST: " + str(loss))
-
-            limit = initial + (revenue - spent)     # can spend everything it earns
-            print("LIMIT: " + str(limit))
-            sells[0].append(i)
-            sells[1].append(real[i])
-            print("SOLD AT: " + str(real[i]))
-    print("TOTAL LOSS: " + str(total_loss))
-    print("MAX SPENT: " + str(max_spent))
-    print("NUM SHARES: " + str(num_shares) + ", PRICED AT: " + str(real[len(real)-2]))
-    return revenue - spent, buys, sells
 
 def main():
     print("Hello World!")
@@ -79,7 +33,7 @@ def main():
     # Pre-processing
 
     raw_data = history_processing.saveToCSV(TICKER)
-    lead_infos, open_vals, indic_data, data_normalizer = history_processing.dataframeToData(raw_data, LOOK_BACK_PERIOD)     # 50 day look-back period
+    lead_infos, open_vals, indic_data, data_normalizer, real_data = history_processing.dataframeToData(raw_data, LOOK_BACK_PERIOD)     # 50 day look-back period
 
     # Training and Testing Data Split
     test_split = 0.15
@@ -121,17 +75,24 @@ def main():
     evaluation = model.evaluate([indic_test, X_test], y_test)
     print("Eval: " + str(evaluation))
 
-    # Graphing Model predictive performance
+    # Converting percent change predictions to stock value predictions
 
     y_test_prediction = model.predict([indic_test, X_test])
     y_test_prediction = data_normalizer.inverse_transform(y_test_prediction)     # scale back from 0 to 1
-    mse_run = MSE(data_normalizer.inverse_transform(y_test), y_test_prediction)[0]
+    y_test = data_normalizer.inverse_transform(y_test)
+
+    y_test = [real_data[i + n] * (1 + y_test[i]) for i in range(len(y_test))]   # convert percent change to stock value
+    y_test_prediction = [real_data[i + n] * (1 + y_test_prediction[i]) for i in range(len(y_test_prediction))]
+
+    mse_run = MSE(y_test, y_test_prediction)[0]
     print("MSE: " + str(mse_run))
 
     # Running simulation with basic strategy
 
-    profit, buys, sells = run_simul(data_normalizer.inverse_transform(y_test), y_test_prediction)
-    print("Profited: " + str(profit))
+    profit, buys, sells, big_buys = run_simul(y_test, y_test_prediction)
+
+    # Graphing Model predictive performance
+
     plt.gcf().set_size_inches(22, 15, forward=True)
 
     start = 0
@@ -139,25 +100,16 @@ def main():
 
     plt.title(TICKER + str(' Stock Prediction_rsi_stoch_wpr_128_32_50e_SIMUL    MSE:') + str(round(mse_run, 2)))
 
-    plt.plot(data_normalizer.inverse_transform(y_test)[start:end], label='Real')
+    plt.plot(y_test[start:end], label='Real')
     plt.plot(y_test_prediction[start:end], label='Predicted')
 
     plt.scatter(buys[0], buys[1], c='r')
     plt.scatter(sells[0], sells[1], c='g')
+    plt.scatter(big_buys[0], big_buys[1], c='m')
 
     plt.legend(loc='upper left')
 
     plt.show()
-
-# model = Sequential()
-#
-# #model.add(Embedding(input_dim=1173, output_dim=64, input_length=1173))
-# model.add(LSTM(units=16, input_shape=(dataX.shape[1], dataX.shape[2])))
-#
-# model.add(Dense(1173, activation='softmax'))
-# model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
-#
-# model.fit(dataX, dataY, epochs=1)
 
 
 if __name__ == "__main__":
