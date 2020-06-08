@@ -17,7 +17,7 @@ def get_indicators(ohlcv_data, length = 14):
 def RSI(ohlcv_data, length = 14):               # based on closing price
     gain = 0
     loss = 0
-    for i in range(len(ohlcv_data) - length, len(ohlcv_data)-1):
+    for i in range(len(ohlcv_data) - length - 1, len(ohlcv_data)-1):
         if ohlcv_data[i][3] < ohlcv_data[i+1][3]:
             gain += ohlcv_data[i+1][3] - ohlcv_data[i][3]
 

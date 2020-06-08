@@ -15,7 +15,6 @@ def saveToCSV(ticker):
 
     print(data.head())
 
-    # data = csv_to_dataset(f'./{ticker}_daily.csv')           #####
     return data
 
 def csv_to_dataset(csv_path):
@@ -32,30 +31,30 @@ def dataframeToData(data, length):
     data_normaliser = preprocessing.MinMaxScaler()
     data_normalised = data_normaliser.fit_transform(data)
 
-    percent_data = [[((data[i][j] - data[i-1][j])/data[i-1][j]) for j in range(len(data[0]))] for i in range(1, len(data))]
+    percent_data = [[((data[i][j] - data[i-2][j])/data[i-2][j])
+                     for j in range(len(data[0]))] for i in range(2, len(data))]
     percent_normaliser = preprocessing.MinMaxScaler()
     percent_normalised = percent_normaliser.fit_transform(percent_data)
 
-    # ohlcv_data = np.array([data_normalised[i:i+length] for i in range(len(data_normalised) - length)])
-    # open_data_normal = np.array([data_normalised[i + length][0] for i in range(len(data_normalised) - length)])
-
-    ohlcv_data = np.array([percent_normalised[i:i+length] for i in range(len(percent_normalised) - length)])
+    ohlcv_data = np.array([percent_normalised[i:i + length] for i in range(len(percent_normalised) - length)])
     open_data_normal = np.array([percent_normalised[i + length][0] for i in range(len(percent_normalised) - length)])
 
     open_data_normal = np.expand_dims(open_data_normal, -1)
     open_data_normal = np.reshape(open_data_normal, (open_data_normal.shape[0], open_data_normal.shape[1]))
-    print(open_data_normal)
 
-    # open_data = np.array([data[i+length][0] for i in range(len(data) - length)])
-    # open_data = np.expand_dims(open_data, -1)
-    open_data = np.array([percent_data[i+length][0] for i in range(len(percent_data) - length)])
+    open_data = np.array([percent_data[i + length][0] for i in range(len(percent_data) - length)])
     open_data = np.expand_dims(open_data, -1)
 
     y_normaliser = preprocessing.MinMaxScaler()
     y_normaliser.fit(open_data)
 
+    # pre_indic_data = np.array([data[i:i + length] for i in range(len(data) - length)])
+    # indic_data = np.array([get_indicators(pre_indic_data[i], 14) for i in range(len(pre_indic_data))])
     indic_data = np.array([get_indicators(ohlcv_data[i], 14) for i in range(len(ohlcv_data))])
-    print(indic_data)
+    # print(indic_data)
+
+    current = [percent_normalised[len(percent_normalised) - length: len(percent_normalised)]]
+    current.append(get_indicators(current[0], 14))
 
     # print("high")
     # print(ohlcv_data)
@@ -64,4 +63,4 @@ def dataframeToData(data, length):
     # print(ohlcv_data[1][length-1])
     real_data = np.array([data[i + length][0] for i in range(len(data) - length)])
 
-    return ohlcv_data, open_data_normal, indic_data, y_normaliser, real_data
+    return ohlcv_data, open_data_normal, indic_data, y_normaliser, real_data, current
