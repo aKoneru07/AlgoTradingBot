@@ -132,7 +132,7 @@ def main():
     # Train Model
     # model, predict = train_model('MSFT', look_back_period=50)
 
-    tickers = ['MSFT', 'AAPL', 'AAL', 'UAL', 'CAKE']
+    tickers = ['MSFT', 'AAPL', 'AAL', 'UAL', 'CAKE', 'PENN', 'SNAP', 'TWTR']
 
     nextTrain = dt.datetime.now()
     nextTrain = nextTrain.replace(hour=16, minute=30, second=0)       # trains at 4:30 p.m. every day
@@ -141,7 +141,7 @@ def main():
 
         time_to_train = (nextTrain - dt.datetime.now()).total_seconds()
         print("Next Training in " + str(time_to_train) + " seconds")
-        time.sleep(time_to_train)
+        # time.sleep(time_to_train)
 
         if dt.datetime.now() > nextTrain:
             tick_models = []
@@ -155,11 +155,17 @@ def main():
                 tick_predictions.append(predict)
 
             # EXECUTE TRADES
+            print("Analyzing Potential Trades")
+            portfolio = api.list_positions()
+            positions = []
+            for p in portfolio:
+                positions.append(p.symbol)
             for i in range(len(tickers)):
+                print(tickers[i] + " | Prediction: " + str(tick_predictions[i]))
                 buying_power = int(float(api.get_account().buying_power))
-                if tick_predictions[i] > 0.01 and buying_power > 1100:                              # Buy 10 shares max
+                if tick_predictions[i] > 0.01 and buying_power > 1100:                      # Buy $1000 of shares max
                     current_price = get_last_close(tickers[i])
-                    order_size = min(10, (buying_power / current_price)-1)
+                    order_size = int(min(1000 / current_price, (buying_power / current_price)-1))
                     api.submit_order(
                         symbol=tickers[i],
                         qty=order_size,
@@ -168,9 +174,8 @@ def main():
                         time_in_force='gtc'
                     )
                     print("Buying " + str(order_size) + " shares of " + tickers[i])
-                    print("Prediction: " + str(tick_predictions[i]))
 
-                elif tick_predictions[i] < -0.005 and api.get_position(tickers[i]).qty > 0:         # Sell ALL shares
+                elif tick_predictions[i] < -0.005 and tickers[i] in positions:         # Sell ALL shares
                     api.submit_order(
                         symbol=tickers[i],
                         qty=api.get_position(tickers[i]).qty,
@@ -181,6 +186,9 @@ def main():
                     print("Selling " + str(api.get_position(tickers[i]).qty) + " shares of " + tickers[i])
 
             nextTrain += dt.timedelta(days = 1)
+        else:
+            print("Not yet: " + str(dt.datetime.now().hour))
+            time.sleep(600)
 
 if __name__ == "__main__":
     main()
